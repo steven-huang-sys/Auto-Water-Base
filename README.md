@@ -9,3 +9,6 @@ Intended to be an ESP32-S3 on the final product
 
 ### Display
 2.2in TFT LCD Display with ILI9488 Drivers. SPI interface
+
+## Schematic Notes
+This is on KiCAD 6.0. Footprints for the ESP32 can be found here: https://github.com/espressif/kicad-libraries/tree/legacy_kicad6?tab=readme-ov-file
