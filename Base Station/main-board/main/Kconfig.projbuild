@@ -1,49 +1,125 @@
 menu "Example Configuration"
-
-    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
-
-    choice BLINK_LED
-        prompt "Blink LED type"
-        default BLINK_LED_GPIO
+    
+    config SET_RAW_ADV_DATA
+        bool "Use raw data for advertising packets and scan response data"
         help
-            Select the LED type. A normal level controlled LED or an addressable LED strip.
-            The default selection is based on the Espressif DevKit boards.
-            You can change the default selection according to your board.
+            If this config item is set, raw binary data will be used to generate advertising & scan response data.
+            This option uses the esp_ble_gap_config_adv_data_raw() and esp_ble_gap_config_scan_rsp_data_raw()
+            functions.
 
-        config BLINK_LED_GPIO
-            bool "GPIO"
-        config BLINK_LED_STRIP
-            bool "LED strip"
+            If this config item is unset, advertising & scan response data is provided via a higher-level
+            esp_ble_adv_data_t structure. The lower layer will generate the BLE packets. This option has higher
+            overhead at runtime.
+
+    choice EXAMPLE_LCD_CONTROLLER
+        prompt "LCD controller model"
+        default EXAMPLE_LCD_CONTROLLER_ILI9341
+        help
+            Select LCD controller model
+
+        config EXAMPLE_LCD_CONTROLLER_ILI9341
+            bool "ILI9341"
+
+        config EXAMPLE_LCD_CONTROLLER_GC9A01
+            bool "GC9A01"
     endchoice
 
-    choice BLINK_LED_STRIP_BACKEND
-        depends on BLINK_LED_STRIP
-        prompt "LED strip backend peripheral"
-        default BLINK_LED_STRIP_BACKEND_RMT if SOC_RMT_SUPPORTED
-        default BLINK_LED_STRIP_BACKEND_SPI
+    config EXAMPLE_LCD_TOUCH_ENABLED
+        bool "Enable LCD touch"
+        default n
         help
-            Select the backend peripheral to drive the LED strip.
+            Enable this option if you wish to use display touch. You can select from touch controllers.
 
-        config BLINK_LED_STRIP_BACKEND_RMT
-            depends on SOC_RMT_SUPPORTED
-            bool "RMT"
-        config BLINK_LED_STRIP_BACKEND_SPI
-            bool "SPI"
+    choice EXAMPLE_LCD_TOUCH_CONTROLLER
+        prompt "LCD touch controller model"
+        depends on EXAMPLE_LCD_TOUCH_ENABLED
+        default EXAMPLE_LCD_TOUCH_CONTROLLER_STMPE610
+        help
+            Select LCD touch controller model
+
+        config EXAMPLE_LCD_TOUCH_CONTROLLER_STMPE610
+            bool "STMPE610"
+            help
+                Touch controller STMPE610 connected via SPI.
     endchoice
 
-    config BLINK_GPIO
-        int "Blink GPIO number"
-        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
-        default 8
-        help
-            GPIO number (IOxx) to blink on and off the LED.
-            Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+    menu "SoftAP Configuration"
+        comment "SoftAP Configuration"
 
-    config BLINK_PERIOD
-        int "Blink period in ms"
-        range 10 3600000
-        default 1000
-        help
-            Define the blinking period in milliseconds.
+        config ESP_WIFI_AP_SSID
+            string "WiFi AP SSID"
+            default "Team22AP"
+            help
+                SSID (network name) of the AP for the example to connect to.
 
+        config ESP_WIFI_AP_PASSWORD
+            string "WiFi AP Password"
+            default "password"
+            help
+                WiFi password of the AP for the example to use.
+
+        config ESP_WIFI_AP_CHANNEL
+            int "WiFi AP Channel"
+            range 1 14
+            default 1
+            help
+                WiFi channel (network channel) of the AP for the example to use.
+
+        config ESP_MAX_STA_CONN_AP
+            int "Maximal STA connections"
+            default 4
+            help
+                Max number of the STA connects to AP.
+    endmenu
+
+    menu "STA Configuration"
+        comment "STA Configuration"
+
+        config ESP_WIFI_REMOTE_AP_SSID
+            string "WiFi Remote AP SSID"
+            default "Team22RemoteAP"
+            help
+                SSID (network name) for the example's sta to connect to.
+
+        config ESP_WIFI_REMOTE_AP_PASSWORD
+            string "WiFi Remote AP Password"
+            default "password"
+            help
+                WiFi password for the example to use.
+
+        config ESP_MAXIMUM_STA_RETRY
+            int "Maximum retry"
+            default 5
+            help
+                Set the maximum retry value to prevent the station from continuously
+                attempting to reconnect to the Access Point (AP) when the AP doesn't exist.
+
+        choice ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD
+            prompt "WiFi Scan auth mode threshold"
+            default ESP_WIFI_AUTH_WPA2_PSK
+            help
+                The weakest authmode to accept in the scan mode.
+                This value defaults to ESP_WIFI_AUTH_WPA2_PSK incase password is present
+                and ESP_WIFI_AUTH_OPEN is used. Please select ESP_WIFI_AUTH_WEP / ESP_WIFI_AUTH_WPA_PSK
+                incase AP is operating in WEP / WPA mode.
+
+            config ESP_WIFI_AUTH_OPEN
+                bool "OPEN"
+            config ESP_WIFI_AUTH_WEP
+                bool "WEP"
+            config ESP_WIFI_AUTH_WPA_PSK
+                bool "WPA PSK"
+            config ESP_WIFI_AUTH_WPA2_PSK
+                bool "WPA2 PSK"
+            config ESP_WIFI_AUTH_WPA_WPA2_PSK
+                bool "WPA/WPA2 PSK"
+            config ESP_WIFI_AUTH_WPA3_PSK
+                bool "WPA3 PSK"
+            config ESP_WIFI_AUTH_WPA2_WPA3_PSK
+                bool "WPA2/WPA3 PSK"
+            config ESP_WIFI_AUTH_WAPI_PSK
+                bool "WAPI PSK"
+        endchoice
+    endmenu
+    
 endmenu
