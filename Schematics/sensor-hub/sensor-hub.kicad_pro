@@ -320,6 +320,18 @@
     [
       "e63e39d7-6ac0-4ffd-8aa3-1841a4541b55",
       ""
+    ],
+    [
+      "ee2bfacc-5cfa-4617-b532-5b5986770f60",
+      "USB and Power Circuitry"
+    ],
+    [
+      "0a48ead3-ae75-4d18-8cd4-afc0212fb2c9",
+      "ESP32 WROOM"
+    ],
+    [
+      "59b1ea38-9812-4f81-8b3c-7b7f6018553c",
+      "Peripherals"
     ]
   ],
   "text_variables": {}
