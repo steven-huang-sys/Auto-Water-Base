@@ -11,14 +11,15 @@
 #include "esp_event.h"
 
 /* Bluetooth LE Libraries, make sure BT is enabled*/
-#include "esp_bt.h"
-#include "esp_gap_ble_api.h"
-#include "esp_gatts_api.h"
-#include "esp_bt_defs.h"
-#include "esp_bt_main.h"
-#include "esp_bt_device.h"
-#include "esp_gatt_common_api.h"
-#include "sdkconfig.h"
+// #include "esp_bt.h"
+// #include "esp_gap_ble_api.h"
+// #include "esp_gatts_api.h"
+// #include "esp_bt_defs.h"
+// #include "esp_bt_main.h"
+// #include "esp_bt_device.h"
+// #include "esp_gatt_common_api.h"
+// #include "sdkconfig.h"
+#include "ble_host.h"
 
 /* WiFi Libraries*/
 #include "esp_mac.h"
@@ -37,5 +38,14 @@
 
 void app_main(void)
 {
-    printf("100\n");
+    esp_err_t esp_status;
+
+    esp_status = nvs_flash_init();
+    if (esp_status == ESP_ERR_NVS_NO_FREE_PAGES || esp_status == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        esp_status = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(esp_status);
+
+    esp_status = ble_init();
 }

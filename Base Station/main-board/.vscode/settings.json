@@ -15,7 +15,10 @@
     "idf.toolsPathWin": "C:\\Users\\Cools\\.espressif",
     "files.associations": {
         "sdkconfig.h": "c",
-        "esp_mac.h": "c"
+        "esp_mac.h": "c",
+        "nvs_flash.h": "c",
+        "esp_gatt_common_api.h": "c",
+        "esp_bt.h": "c"
     },
     "idf.flashType": "UART",
     "idf.portWin": "COM4"
