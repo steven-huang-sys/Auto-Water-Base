@@ -22,19 +22,23 @@
 #include "ble_host.h"
 
 /* WiFi Libraries*/
-#include "esp_mac.h"
-#include "esp_wifi.h"
-#include "esp_netif_net_stack.h"
-#include "esp_netif.h"
-#include "nvs_flash.h"
-#include "lwip/inet.h"
-#include "lwip/netdb.h"
-#include "lwip/sockets.h"
-#if IP_NAPT
-#include "lwip/lwip_napt.h"
-#endif
-#include "lwip/err.h"
-#include "lwip/sys.h"
+// #include "esp_mac.h"
+// #include "esp_wifi.h"
+// #include "esp_netif_net_stack.h"
+// #include "esp_netif.h"
+// #include "nvs_flash.h"
+// #include "lwip/inet.h"
+// #include "lwip/netdb.h"
+// #include "lwip/sockets.h"
+// #if IP_NAPT
+// #include "lwip/lwip_napt.h"
+// #endif
+// #include "lwip/err.h"
+// #include "lwip/sys.h"
+#include "wifi_base.h"
+
+/* Display Libraries */
+#include "spi_display.h"
 
 void app_main(void)
 {
@@ -48,4 +52,6 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_status);
 
     esp_status = ble_init();
+    wifi_init();
+    display_init();
 }
