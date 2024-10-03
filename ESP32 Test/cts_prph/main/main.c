@@ -5,7 +5,7 @@
  */
 
 #include "esp_log.h"
-// #include "nvs_flash.h"
+#include "nvs_flash.h"
 #include "freertos/FreeRTOSConfig.h"
 /* BLE */
 #include "nimble/nimble_port.h"
@@ -14,7 +14,7 @@
 #include "host/util/util.h"
 #include "console/console.h"
 #include "services/gap/ble_svc_gap.h"
-#include "ble_host.h"
+#include "ble_cts_prph.h"
 #include "services/cts/ble_svc_cts.h"
 
 #if CONFIG_EXAMPLE_EXTENDED_ADV
@@ -27,7 +27,7 @@ static uint8_t ext_adv_pattern_1[] = {
 #endif
 
 static const char *tag = "NimBLE_CTS_PRPH";
-static const char *device_name = CONFIG_NIMBLE_SVC_GAP_DEVICE_NAME;
+static const char *device_name = "ble_cts_prph";
 
 static int ble_cts_prph_gap_event(struct ble_gap_event *event, void *arg);
 
@@ -272,18 +272,17 @@ void ble_cts_prph_host_task(void *param)
     nimble_port_freertos_deinit();
 }
 
-void ble_init(void)
+void app_main(void)
 {
     int rc;
-    esp_err_t ret;
 
     /* Initialize NVS — it is used to store PHY calibration data */
-    // esp_err_t ret = nvs_flash_init();
-    // if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    //     ESP_ERROR_CHECK(nvs_flash_erase());
-    //     ret = nvs_flash_init();
-    // }
-    // ESP_ERROR_CHECK(ret);
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 
     ret = nimble_port_init();
     if (ret != ESP_OK) {
