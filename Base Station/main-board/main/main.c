@@ -19,8 +19,17 @@
 /* Display Module */
 #include "spi_display.h"
 
+/* Buttons or Control Pad Module*/
+#include "hub_controller.h"
+
+/* HTTP Server */
+#include "udp_client.h"
+
 void app_main(void)
 {
+    
+    control_init();
+
     esp_err_t esp_status;
 
     esp_status = nvs_flash_init();
@@ -33,4 +42,6 @@ void app_main(void)
     display_init();
     ble_init();
     wifi_init();
+    udp_client_init();
+
 }

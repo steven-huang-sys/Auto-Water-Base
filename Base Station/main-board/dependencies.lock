@@ -37,6 +37,24 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.2.0
+  espressif/esp_lcd_st7796:
+    component_hash: abf12880a051bd2e26b3a0bacac131e8bbd8d56e3b0fe0edde4d7283d2dc5aa5
+    dependencies:
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com/
+      require: private
+      version: 0.*
+    - name: idf
+      require: private
+      version: '>=4.4'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    targets:
+    - esp32s2
+    - esp32s3
+    - esp32p4
+    version: 1.3.0
   espressif/esp_lcd_touch:
     component_hash: 779b4ba2464a3ae85681e4b860caa5fdc35801458c23f3039ee761bae7f442a4
     dependencies:
@@ -61,17 +79,31 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.0.6
+  espressif/esp_lvgl_port:
+    component_hash: ff682937ac7f94653e45719f888db637830e90dd0ba3ff5b72d2c808c7a93949
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.4'
+    - name: lvgl/lvgl
+      registry_url: https://components.espressif.com/
+      require: public
+      version: '>=8,<10'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 2.4.1
   idf:
     source:
       type: idf
     version: 5.3.1
   lvgl/lvgl:
-    component_hash: 948bff879a345149b83065535bbc4a026ce9f47498a22881e432a264b9098015
+    component_hash: 2409fdc84e9766d2a18afd84b051aef3f838348136cdb1c10ac2e8bcdb012bf6
     dependencies: []
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 8.3.11
+    version: 9.2.0
   nimble_peripheral_utils:
     dependencies: []
     source:
@@ -81,10 +113,12 @@ dependencies:
 direct_dependencies:
 - espressif/esp_lcd_gc9a01
 - espressif/esp_lcd_ili9341
+- espressif/esp_lcd_st7796
 - espressif/esp_lcd_touch_stmpe610
+- espressif/esp_lvgl_port
 - idf
 - lvgl/lvgl
 - nimble_peripheral_utils
-manifest_hash: 8ca953994e5413a96c6133b053ce3adf4177332ccdeb16f820f1099a717b5292
-target: esp32
+manifest_hash: f2d79781bbc07fbf907df7e961e9721b9106fe0bbf043e0854eaf7df71bd261b
+target: esp32s3
 version: 2.0.0

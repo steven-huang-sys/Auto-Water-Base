@@ -1,7 +1,20 @@
 /*
- * SPDX-FileCopyrightText: 2017-2023 Espressif Systems (Shanghai) CO LTD
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * SPDX-License-Identifier: Apache-2.0
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #include <assert.h>
@@ -12,10 +25,187 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #include "ble_host.h"
-#include "services/cts/ble_svc_cts.h"
-#include <time.h>
-#include "sys/time.h"
+#include "services/ans/ble_svc_ans.h"
 
+/*** Maximum number of characteristics with the notify flag ***/
+#define MAX_NOTIFY 5
+
+static const ble_uuid128_t gatt_svr_svc_uuid =
+    BLE_UUID128_INIT(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                     0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78);
+
+/* A characteristic that can be subscribed to */
+// static uint8_t gatt_svr_chr_val;
+static uint8_t gatt_svr_chr_val[500];
+static uint16_t gatt_svr_chr_val_handle;
+static const ble_uuid128_t gatt_svr_chr_uuid =
+    BLE_UUID128_INIT(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                     0x00, 0x00, 0x00, 0x00, 0x87, 0x65, 0x43, 0x21);
+
+/* A custom descriptor */
+static uint8_t gatt_svr_dsc_val;
+static const ble_uuid128_t gatt_svr_dsc_uuid =
+    BLE_UUID128_INIT(0x01, 0x01, 0x01, 0x01, 0x12, 0x12, 0x12, 0x12,
+                     0x23, 0x23, 0x23, 0x23, 0x34, 0x34, 0x34, 0x34);
+
+static int
+gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
+                struct ble_gatt_access_ctxt *ctxt,
+                void *arg);
+
+static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
+    {
+        /*** Service ***/
+        .type = BLE_GATT_SVC_TYPE_PRIMARY,
+        .uuid = &gatt_svr_svc_uuid.u,
+        .characteristics = (struct ble_gatt_chr_def[])
+        { {
+                /*** This characteristic can be subscribed to by writing 0x00 and 0x01 to the CCCD ***/
+                .uuid = &gatt_svr_chr_uuid.u,
+                .access_cb = gatt_svc_access,
+#if CONFIG_EXAMPLE_ENCRYPTION
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE |
+                BLE_GATT_CHR_F_READ_ENC | BLE_GATT_CHR_F_WRITE_ENC |
+                BLE_GATT_CHR_F_NOTIFY | BLE_GATT_CHR_F_INDICATE,
+#else
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_NOTIFY | BLE_GATT_CHR_F_INDICATE,
+#endif
+                .val_handle = &gatt_svr_chr_val_handle,
+                .descriptors = (struct ble_gatt_dsc_def[])
+                { {
+                      .uuid = &gatt_svr_dsc_uuid.u,
+#if CONFIG_EXAMPLE_ENCRYPTION
+                      .att_flags = BLE_ATT_F_READ | BLE_ATT_F_READ_ENC,
+#else
+                      .att_flags = BLE_ATT_F_READ,
+#endif
+                      .access_cb = gatt_svc_access,
+                    }, {
+                      0, /* No more descriptors in this characteristic */
+                    }
+                },
+            }, {
+                0, /* No more characteristics in this service. */
+            }
+        },
+    },
+
+    {
+        0, /* No more services. */
+    },
+};
+
+static int
+gatt_svr_write(struct os_mbuf *om, uint16_t min_len, uint16_t max_len,
+               void *dst, uint16_t *len)
+{
+    uint16_t om_len;
+    int rc;
+
+    om_len = OS_MBUF_PKTLEN(om);
+    if (om_len < min_len || om_len > max_len) {
+        return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+    }
+
+    rc = ble_hs_mbuf_to_flat(om, dst, max_len, len);
+    if (rc != 0) {
+        return BLE_ATT_ERR_UNLIKELY;
+    }
+
+    return 0;
+}
+
+/**
+ * Access callback whenever a characteristic/descriptor is read or written to.
+ * Here reads and writes need to be handled.
+ * ctxt->op tells weather the operation is read or write and
+ * weather it is on a characteristic or descriptor,
+ * ctxt->dsc->uuid tells which characteristic/descriptor is accessed.
+ * attr_handle give the value handle of the attribute being accessed.
+ * Accordingly do:
+ *     Append the value to ctxt->om if the operation is READ
+ *     Write ctxt->om to the value if the operation is WRITE
+ **/
+static int
+gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
+                struct ble_gatt_access_ctxt *ctxt, void *arg)
+{
+    const ble_uuid_t *uuid;
+    int rc;
+
+    switch (ctxt->op) {
+    case BLE_GATT_ACCESS_OP_READ_CHR:
+        if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+            MODLOG_DFLT(INFO, "Characteristic read; conn_handle=%d attr_handle=%d\n",
+                        conn_handle, attr_handle);
+        } else {
+            MODLOG_DFLT(INFO, "Characteristic read by NimBLE stack; attr_handle=%d\n",
+                        attr_handle);
+        }
+        uuid = ctxt->chr->uuid;
+        if (attr_handle == gatt_svr_chr_val_handle) {
+            rc = os_mbuf_append(ctxt->om,
+                                &gatt_svr_chr_val,
+                                sizeof(gatt_svr_chr_val));
+            return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+        }
+        goto unknown;
+
+    case BLE_GATT_ACCESS_OP_WRITE_CHR:
+        if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+            MODLOG_DFLT(INFO, "Characteristic write; conn_handle=%d attr_handle=%d",
+                        conn_handle, attr_handle);
+        } else {
+            MODLOG_DFLT(INFO, "Characteristic write by NimBLE stack; attr_handle=%d",
+                        attr_handle);
+        }
+        uint8_t * data = (ctxt->om->om_data);
+        MODLOG_DFLT(INFO, "Data received: %s",
+                    data);
+        uuid = ctxt->chr->uuid;
+        if (attr_handle == gatt_svr_chr_val_handle) {
+            rc = gatt_svr_write(ctxt->om,
+                                sizeof(gatt_svr_chr_val),
+                                sizeof(gatt_svr_chr_val),
+                                &gatt_svr_chr_val, NULL);
+            ble_gatts_chr_updated(attr_handle);
+            MODLOG_DFLT(INFO, "Notification/Indication scheduled for "
+                        "all subscribed peers.\n");
+            return rc;
+        }
+        goto unknown;
+
+    case BLE_GATT_ACCESS_OP_READ_DSC:
+        if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+            MODLOG_DFLT(INFO, "Descriptor read; conn_handle=%d attr_handle=%d\n",
+                        conn_handle, attr_handle);
+        } else {
+            MODLOG_DFLT(INFO, "Descriptor read by NimBLE stack; attr_handle=%d\n",
+                        attr_handle);
+        }
+        uuid = ctxt->dsc->uuid;
+        if (ble_uuid_cmp(uuid, &gatt_svr_dsc_uuid.u) == 0) {
+            rc = os_mbuf_append(ctxt->om,
+                                &gatt_svr_dsc_val,
+                                sizeof(gatt_svr_chr_val));
+            return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+        }
+        goto unknown;
+
+    case BLE_GATT_ACCESS_OP_WRITE_DSC:
+        goto unknown;
+
+    default:
+        goto unknown;
+    }
+
+unknown:
+    /* Unknown characteristic/descriptor;
+     * The NimBLE host should not have called this function;
+     */
+    assert(0);
+    return BLE_ATT_ERR_UNLIKELY;
+}
 
 void
 gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg)
@@ -49,115 +239,27 @@ gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg)
     }
 }
 
-static struct ble_svc_cts_local_time_info local_info = { .timezone = 0, .dst_offset = TIME_STANDARD };
-static struct timeval last_updated;
-uint8_t adjust_reason;
-int fetch_current_time(struct ble_svc_cts_curr_time *ctime) {
-    time_t now;
-    struct tm timeinfo;
-    struct timeval tv_now;
-    /* time given by 'time()' api does not persist after reboots */
-    time(&now);
-    localtime_r(&now, &timeinfo);
-    gettimeofday(&tv_now, NULL);
-    if(ctime != NULL) {
-        /* fill date_time */
-        ctime->et_256.d_d_t.d_t.year = timeinfo.tm_year + 1900;
-        ctime->et_256.d_d_t.d_t.month = timeinfo.tm_mon + 1;
-        ctime->et_256.d_d_t.d_t.day = timeinfo.tm_mday;
-        ctime->et_256.d_d_t.d_t.hours = timeinfo.tm_hour;
-        ctime->et_256.d_d_t.d_t.minutes = timeinfo.tm_min;
-        ctime->et_256.d_d_t.d_t.seconds = timeinfo.tm_sec;
-
-        /* day of week */
-        /* time gives day range of [0, 6], current_time_sevice
-           has day range of [1,7] */
-        ctime->et_256.d_d_t.day_of_week = timeinfo.tm_wday + 1;
-
-        /* fractions_256 */
-        ctime->et_256.fractions_256 = (((uint64_t)tv_now.tv_usec * 256L )/ 1000000L);
-
-        ctime->adjust_reason = adjust_reason;
-    }
-    return 0;
-}
-
-int set_current_time(struct ble_svc_cts_curr_time ctime) {
-    time_t now;
-    struct tm timeinfo;
-    struct timeval tv_now;
-    /* fill date_time */
-    timeinfo.tm_year= ctime.et_256.d_d_t.d_t.year - 1900 ;
-    timeinfo.tm_mon = ctime.et_256.d_d_t.d_t.month - 1;
-    timeinfo.tm_mday = ctime.et_256.d_d_t.d_t.day;
-    timeinfo.tm_hour = ctime.et_256.d_d_t.d_t.hours;
-    timeinfo.tm_min = ctime.et_256.d_d_t.d_t.minutes;
-    timeinfo.tm_sec = ctime.et_256.d_d_t.d_t.seconds;
-    timeinfo.tm_wday = ctime.et_256.d_d_t.day_of_week - 1;
-    now = mktime(&timeinfo);
-    tv_now.tv_sec = now;
-    settimeofday(&tv_now, NULL);
-    /* set the last updated */
-    gettimeofday(&last_updated, NULL);
-    adjust_reason = ctime.adjust_reason;
-    return 0;
-}
-
-int fetch_local_time_info(struct ble_svc_cts_local_time_info *info) {
-
-    if(info != NULL) {
-        memcpy(info, &local_info, sizeof local_info);
-    }
-    return 0;
-}
-
-int set_local_time_info(struct ble_svc_cts_local_time_info info) {
-    /* just store the dst offset and timezone locally
-        as we don't have the access to time using ntp server */
-    local_info.timezone = info.timezone;
-    local_info.dst_offset = info.dst_offset;
-    gettimeofday(&last_updated, NULL);
-    return 0;
-}
-int fetch_reference_time_info(struct ble_svc_cts_reference_time_info *info) {
-    struct timeval tv_now;
-    uint64_t days_since_update;
-    uint64_t hours_since_update;
-
-    gettimeofday(&tv_now, NULL);
-    /* subtract the time when the last time was updated */
-    tv_now.tv_sec -= last_updated.tv_sec; /* ignore microseconds */
-    info->time_source = TIME_SOURCE_MANUAL;
-    info->time_accuracy = 0;
-    days_since_update = (tv_now.tv_sec / 86400L);
-    hours_since_update = (tv_now.tv_sec / 3600);
-    info->days_since_update = days_since_update < 255 ? days_since_update : 255;
-
-    if(days_since_update > 254) {
-        info->hours_since_update = 255;
-    }
-    else {
-        hours_since_update = (tv_now.tv_sec % 86400L) / 3600;
-        info->hours_since_update = hours_since_update;
-    }
-    adjust_reason = (CHANGE_OF_DST_MASK | CHANGE_OF_TIME_ZONE_MASK);
-
-    return 0;
-}
 int
 gatt_svr_init(void)
 {
-    struct ble_svc_cts_cfg cfg;
+    int rc;
 
     ble_svc_gap_init();
     ble_svc_gatt_init();
+    ble_svc_ans_init();
 
-    cfg.fetch_time_cb = fetch_current_time;
-    cfg.local_time_info_cb = fetch_local_time_info;
-    cfg.ref_time_info_cb = fetch_reference_time_info;
-    cfg.set_time_cb = set_current_time;
-    cfg.set_local_time_info_cb = set_local_time_info;
-    ble_svc_cts_init(cfg);
+    rc = ble_gatts_count_cfg(gatt_svr_svcs);
+    if (rc != 0) {
+        return rc;
+    }
+
+    rc = ble_gatts_add_svcs(gatt_svr_svcs);
+    if (rc != 0) {
+        return rc;
+    }
+
+    /* Setting a value for the read-only descriptor */
+    gatt_svr_dsc_val = 0x99;
 
     return 0;
 }

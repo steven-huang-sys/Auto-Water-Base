@@ -32,6 +32,8 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+#include "../udp_client/udp_client.h"
+
 /* The examples use WiFi configuration that you can set via project configuration menu.
 
    If you'd rather not, just change the below entries to strings with
@@ -75,7 +77,7 @@
 #define WIFI_FAIL_BIT      BIT1
 
 static const char *TAG_AP = "WiFi SoftAP";
-static const char *TAG_STA = "WiFi Sta";
+static const char *TAG_STA = "To WiFi";
 
 static int s_retry_num = 0;
 
@@ -96,6 +98,15 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
         ESP_LOGI(TAG_STA, "Station started");
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
+            esp_wifi_connect();
+            s_retry_num++;
+            ESP_LOGI(TAG_STA, "retry to connect to the AP");
+        } else {
+            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+        }
+        ESP_LOGI(TAG_STA,"connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
         ESP_LOGI(TAG_STA, "Got IP:" IPSTR, IP2STR(&event->ip_info.ip));
@@ -198,7 +209,7 @@ void wifi_init(void)
     esp_netif_t *esp_netif_sta = wifi_init_sta();
 
     /* Start WiFi */
-    ESP_ERROR_CHECK(esp_wifi_start() );
+    ESP_ERROR_CHECK(esp_wifi_start());
 
     /*
      * Wait until either the connection is established (WIFI_CONNECTED_BIT) or
