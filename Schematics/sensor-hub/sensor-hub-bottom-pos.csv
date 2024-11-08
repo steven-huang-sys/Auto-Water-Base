@@ -1,0 +1,10 @@
+Ref,Val,Package,PosX,PosY,Rot,Side
+"C11","22u","C_0805_2012Metric_Pad1.18x1.45mm_HandSolder",-105.300000,-29.950000,90.000000,bottom
+"C12","0.1u","C_0805_2012Metric_Pad1.18x1.45mm_HandSolder",-108.700000,-29.950000,90.000000,bottom
+"J3","Conn_01x09_Male","PinHeader_1x09_P2.54mm_Vertical",-103.250000,-98.150000,-90.000000,bottom
+"R14","0","R_0805_2012Metric_Pad1.20x1.40mm_HandSolder",-103.050000,-29.950000,-90.000000,bottom
+"SW3","SW_Push","SW_PUSH-12mm",-109.850000,-142.400000,-90.000000,bottom
+"SW4","SW_Push","SW_PUSH-12mm",-125.000000,-123.960000,-90.000000,bottom
+"SW5","SW_Push","SW_PUSH-12mm",-109.900000,-105.960000,-90.000000,bottom
+"SW6","SW_Push","SW_PUSH-12mm",-95.000000,-123.960000,-90.000000,bottom
+"SW7","SW_Push","SW_PUSH-12mm",-109.900000,-123.960000,-90.000000,bottom
