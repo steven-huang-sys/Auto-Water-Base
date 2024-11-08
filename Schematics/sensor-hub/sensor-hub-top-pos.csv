@@ -1,4 +1,4 @@
-Designator,Val,Package,MidX,MidY,Rotation,Layer
+Designator,Val,Package,Mid X,Mid Y,Rotation,Layer
 C1,1u,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,116.7,-67.7,180,top
 C2,4.7u,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,113.05,-80.05,180,top
 C3,10u,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,130.45,-63.55,-90,top
@@ -10,7 +10,7 @@ C8,0.1u,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,91.15,-33.55,90,top
 C9,0.1u,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,126.55,-41.55,180,top
 C10,15p,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,94.2,-48.35,-90,top
 C13,1n,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,120,-152.5,180,top
-C14,1n,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,134,-133.3,180,top
+C14,1n,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,136.1,-133.2,180,top
 C15,1n,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,121.2,-114.55,180,top
 C16,1n,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,102.5,-133,180,top
 C17,1n,C_0805_2012Metric_Pad1.18x1.45mm_HandSolder,118.25,-133.35,180,top
@@ -43,12 +43,12 @@ R11,Optional,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,92.8,-42.5,0,top
 R12,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,96.5,-29.3,90,top
 R13,R,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,94.15,-39.4,90,top
 R15,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,119.9,-144.5,180,top
-R16,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,134,-126.7,180,top
+R16,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,136.1,-126.6,180,top
 R17,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,121.05,-105.95,180,top
 R18,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,102.5,-127,180,top
 R19,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,118.2,-126.5,180,top
 R20,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,118.9,-148.7,90,top
-R21,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,133.1,-130.1,90,top
+R21,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,135.2,-130,90,top
 R22,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,120.2,-110.2,90,top
 R23,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,101.5,-130,90,top
 R24,10k,R_0805_2012Metric_Pad1.20x1.40mm_HandSolder,117.3,-129.9,90,top
