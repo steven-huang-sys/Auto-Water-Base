@@ -3,8 +3,6 @@
 
 #include "esp_err.h"
 
-extern int state;
-
 void control_init();
 
 

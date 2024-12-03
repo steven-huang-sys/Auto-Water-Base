@@ -16,12 +16,13 @@
 #include "driver/gpio.h"
 #include "hub_controller.h"
 #include "esp_timer.h"
+#include "shared_variables.h"
 
-#define GPIO_INPUT_IO_0     3
-#define GPIO_INPUT_IO_1     4
-#define GPIO_INPUT_IO_2     5
-#define GPIO_INPUT_IO_3     6
-#define GPIO_INPUT_IO_4     7
+#define GPIO_INPUT_IO_0     1
+#define GPIO_INPUT_IO_1     2
+#define GPIO_INPUT_IO_2     3
+#define GPIO_INPUT_IO_3     4
+#define GPIO_INPUT_IO_4     5
 #define GPIO_INPUT_PIN_SEL  ((1ULL<<GPIO_INPUT_IO_0) | (1ULL<<GPIO_INPUT_IO_1) | (1ULL<<GPIO_INPUT_IO_2) | (1ULL<<GPIO_INPUT_IO_3) | (1ULL<<GPIO_INPUT_IO_4))
 /*
  * Let's say, GPIO_INPUT_IO_0=4, GPIO_INPUT_IO_1=5

@@ -33,6 +33,7 @@
 #include "lwip/sys.h"
 
 #include "../udp_client/udp_client.h"
+#include "shared_variables.h"
 
 /* The examples use WiFi configuration that you can set via project configuration menu.
 
@@ -76,10 +77,27 @@
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
 
+#define DEVICE_ARRAY_SIZE      10
+#define IP_STR_SIZE            INET_ADDRSTRLEN
+#define MAC_STR_SIZE           18
+#define COMMAND_BUFFER         50
+
 static const char *TAG_AP = "WiFi SoftAP";
 static const char *TAG_STA = "To WiFi";
 
 static int s_retry_num = 0;
+
+// struct devices {
+//     char ipaddr_str[IP_STR_SIZE];
+//     char mac_str[MAC_STR_SIZE];
+//     char command[COMMAND_BUFFER];
+//     int temperature;
+//     int moisture;
+//     int uv;
+// };
+
+struct devices connected_devices[DEVICE_ARRAY_SIZE];
+
 
 /* FreeRTOS event group to signal when we are connected/disconnected */
 static EventGroupHandle_t s_wifi_event_group;
@@ -87,6 +105,8 @@ static EventGroupHandle_t s_wifi_event_group;
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
+
+    /* Connecting to this device events */
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED) {
         wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *) event_data;
         ESP_LOGI(TAG_AP, "Station "MACSTR" joined, AID=%d",
@@ -95,9 +115,49 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *) event_data;
         ESP_LOGI(TAG_AP, "Station "MACSTR" left, AID=%d, reason:%d",
                  MAC2STR(event->mac), event->aid, event->reason);
+        char macaddr[MAC_STR_SIZE];
+        sprintf(macaddr, MACSTR, MAC2STR(event->mac));
+        for (int i = 0; i < DEVICE_ARRAY_SIZE; i++) {
+            if ((strstr(connected_devices[i].mac_str, macaddr) != NULL)) {
+                memcpy(connected_devices[i].ipaddr_str, "0.0.0.0", sizeof("0.0.0.0"));
+                ESP_LOGI(TAG_AP, "Deleting IP of %s", connected_devices[i].mac_str);
+                return;
+            }
+        }
+
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_AP_STAIPASSIGNED) {
+        ip_event_ap_staipassigned_t *event = (ip_event_ap_staipassigned_t *) event_data;
+        ESP_LOGI(TAG_AP, "Assigned IP: " IPSTR, IP2STR(&event->ip));
+        ESP_LOGI(TAG_AP, "IP assigned to " MACSTR, MAC2STR(event->mac));
+        char ipaddr[INET_ADDRSTRLEN];
+        char macaddr[MAC_STR_SIZE];
+        sprintf(ipaddr, IPSTR, IP2STR(&event->ip));
+        sprintf(macaddr, MACSTR, MAC2STR(event->mac));
+        for (int i = 0; i < DEVICE_ARRAY_SIZE; i++) {
+            if ((strstr(connected_devices[i].mac_str, macaddr) != NULL)) {
+                memcpy(connected_devices[i].ipaddr_str, ipaddr, sizeof(ipaddr));
+                ESP_LOGI(TAG_AP, "Overwrite previously saved IP. New IP: %s", connected_devices[i].ipaddr_str);
+                return;
+            }
+        }
+        for (int i = 0; i < DEVICE_ARRAY_SIZE; i++) {
+            if ((strstr(connected_devices[i].ipaddr_str, "192.168") == NULL)) {
+                memcpy(connected_devices[i].ipaddr_str, ipaddr, sizeof(ipaddr));
+                memcpy(connected_devices[i].mac_str, macaddr, sizeof(macaddr));
+                ESP_LOGI(TAG_AP, "Device %s stored. IP: %s", connected_devices[i].mac_str, connected_devices[i].ipaddr_str);
+                return;
+            }
+        }
+        ESP_LOGE(TAG_AP, "Number of stations exceeded preset limit of %d", DEVICE_ARRAY_SIZE);
+
+    
+    /* Connecting to another station events */
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
         ESP_LOGI(TAG_STA, "Station started");
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED) {
+        ESP_LOGI(TAG_STA, "connected to AP, IP not yet assigned");
+        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
             esp_wifi_connect();
@@ -174,6 +234,30 @@ esp_netif_t *wifi_init_sta(void)
     return esp_netif_sta;
 }
 
+void wifi_sta_reconnect() {
+    // esp_netif_t *esp_netif_sta = esp_netif_create_default_wifi_sta();
+
+    wifi_config_t wifi_sta_config = {
+        .sta = {
+            .ssid = {sta_info.ssid},
+            .password = {sta_info.password},
+            .scan_method = WIFI_ALL_CHANNEL_SCAN,
+            .failure_retry_cnt = EXAMPLE_ESP_MAXIMUM_RETRY,
+            /* Authmode threshold resets to WPA2 as default if password matches WPA2 standards (password len => 8).
+             * If you want to connect the device to deprecated WEP/WPA networks, Please set the threshold value
+             * to WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK and set the password with length and format matching to
+            * WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK standards.
+             */
+            .threshold.authmode = ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD,
+            .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
+        },
+    };
+
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_sta_config));
+
+    ESP_ERROR_CHECK(esp_wifi_connect());
+}
+
 void wifi_init(void)
 {
     ESP_ERROR_CHECK(esp_netif_init());
@@ -189,7 +273,7 @@ void wifi_init(void)
                     NULL,
                     NULL));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-                    IP_EVENT_STA_GOT_IP,
+                    IP_EVENT_STA_GOT_IP | IP_EVENT_AP_STAIPASSIGNED,
                     &wifi_event_handler,
                     NULL,
                     NULL));
@@ -203,6 +287,7 @@ void wifi_init(void)
     /* Initialize AP */
     ESP_LOGI(TAG_AP, "ESP_WIFI_MODE_AP");
     esp_netif_t *esp_netif_ap = wifi_init_softap();
+    
 
     /* Initialize STA */
     ESP_LOGI(TAG_STA, "ESP_WIFI_MODE_STA");
@@ -210,7 +295,8 @@ void wifi_init(void)
 
     /* Start WiFi */
     ESP_ERROR_CHECK(esp_wifi_start());
-
+    ESP_ERROR_CHECK(esp_wifi_set_inactive_time(WIFI_IF_AP, 20));
+    
     /*
      * Wait until either the connection is established (WIFI_CONNECTED_BIT) or
      * connection failed for the maximum number of re-tries (WIFI_FAIL_BIT).

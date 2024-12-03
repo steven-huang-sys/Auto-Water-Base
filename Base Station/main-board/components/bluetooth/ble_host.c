@@ -16,6 +16,8 @@
 #include "services/gap/ble_svc_gap.h"
 #include "ble_host.h"
 
+#include "shared_variables.h"
+
 #if CONFIG_EXAMPLE_EXTENDED_ADV
 static uint8_t ext_adv_pattern_1[] = {
     0x02, 0x01, 0x06,
@@ -35,6 +37,7 @@ static uint8_t ble_addr_type;
 static uint16_t conn_handle;
 static uint16_t notify_handle;
 static uint8_t notify_on = 0;
+
 
 void ble_store_config_init(void);
 
@@ -282,46 +285,48 @@ ble_watering_gap_event(struct ble_gap_event *event, void *arg)
 }
 
 /* This function sends notifications to the client */
-static void
-notify_task(void *arg)
-{
-    static uint8_t payload[500] = {0};/* Data payload */
-    int rc = 0;
-    struct os_mbuf *om;
+// static void
+// notify_task(void *arg)
+// {
+//     // static uint8_t payload[500] = {0};/* Data payload */
+//     int rc = 0;
+//     struct os_mbuf *om;
 
-    payload[0] = 69;
+//     // payload[0] = 69;
     
-    while (1) {
-        payload[1] = rand();
-        payload[99] = rand();
-        /* Check if the MBUFs are available */
-        if (notify_on) {
-            if (os_msys_num_free() >= 2) {
-                do {
-                    om = ble_hs_mbuf_from_flat(payload, sizeof(payload));
-                    if (om == NULL) {
-                        /* Memory not available for mbuf */
-                        ESP_LOGE(tag, "No MBUFs available from pool, retry..");
-                        vTaskDelay(100 / portTICK_PERIOD_MS);
-                    }
-                } while (om == NULL);
+//     while (1) {
+//         // payload[1] = rand();
+//         // payload[99] = rand();
+//         /* Check if the MBUFs are available */
+//         if (notify_on) {
 
-                // ble_gatts_chr_updated(notify_handle);
-                rc = ble_gatts_notify_custom(conn_handle, notify_handle, om);
-                if (rc != 0) {
-                    ESP_LOGE(tag, "Error while sending notification; rc = %d", rc);
-                    vTaskDelay(10 / portTICK_PERIOD_MS);
-                }
-            } 
-            else {
-                ESP_LOGE(tag, "Not enough OS_MBUFs available");
-                vTaskDelay(10 / portTICK_PERIOD_MS);
-            }
-        }
+//             if (os_msys_num_free() >= 2) {
+//                 do {
+//                     om = ble_hs_mbuf_from_flat(ble_payload_ptr, 1024);
+//                     if (om == NULL) {
+//                         /* Memory not available for mbuf */
+//                         ESP_LOGE(tag, "No MBUFs available from pool, retry..");
+//                         vTaskDelay(100 / portTICK_PERIOD_MS);
+//                     }
+//                 } while (om == NULL);
+                
+//                 // ble_gatts_chr_updated(notify_handle);
+//                 rc = ble_gatts_notify_custom(conn_handle, notify_handle, om);
+//                 if (rc != 0) {
+//                     ESP_LOGE(tag, "Error while sending notification; rc = %d", rc);
+//                     vTaskDelay(10 / portTICK_PERIOD_MS);
+//                 }
+                    
+//             } 
+//             else {
+//                 ESP_LOGE(tag, "Not enough OS_MBUFs available");
+//                 vTaskDelay(10 / portTICK_PERIOD_MS);
+//             }
+//         }
 
-        vTaskDelay(3000 / portTICK_PERIOD_MS);
-    }
-}
+//         vTaskDelay(3000 / portTICK_PERIOD_MS);
+//     }
+// }
 
 static void
 bleprph_on_reset(int reason)
@@ -403,7 +408,7 @@ void ble_init(void)
     ble_hs_cfg.sm_mitm = 1;
 
     /* Initialize Notify Task */
-    xTaskCreate(notify_task, "notify_task", 4096, NULL, 10, NULL);
+    // xTaskCreate(notify_task, "notify_task", 4096, NULL, 10, NULL);
 
     rc = gatt_svr_init();
     assert(rc == 0);

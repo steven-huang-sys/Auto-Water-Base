@@ -26,17 +26,36 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "ble_host.h"
 #include "services/ans/ble_svc_ans.h"
+#include "../wifi/wifi_base.h"
+
+#include "shared_variables.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
 
 /*** Maximum number of characteristics with the notify flag ***/
 #define MAX_NOTIFY 5
+
+#define STA_STR_SIZE 30
+
+// char ble_in[1024];
+// int ble_numbytes;
+// struct sta_fields {
+//     char uuid[STA_STR_SIZE];
+//     char password[STA_STR_SIZE];
+//     char identifier[256];
+// };
+struct sta_fields sta_info;
+SemaphoreHandle_t bufferMutex;
+SemaphoreHandle_t bufferMutex1;
 
 static const ble_uuid128_t gatt_svr_svc_uuid =
     BLE_UUID128_INIT(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                      0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78);
 
 /* A characteristic that can be subscribed to */
-// static uint8_t gatt_svr_chr_val;
-static uint8_t gatt_svr_chr_val[500];
+static uint8_t gatt_svr_chr_val;
+// char gatt_svr_chr_val[1024];
 static uint16_t gatt_svr_chr_val_handle;
 static const ble_uuid128_t gatt_svr_chr_uuid =
     BLE_UUID128_INIT(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -162,6 +181,25 @@ gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
         uint8_t * data = (ctxt->om->om_data);
         MODLOG_DFLT(INFO, "Data received: %s",
                     data);
+        
+        char ble_in[512];
+        int ble_numbytes = snprintf(ble_in, ctxt->om->om_len, "%s", data);
+        char * token = strtok(ble_in, ",");
+        memcpy(sta_info.ssid, token, strlen(token));
+        token = strtok(NULL, ",");
+        memcpy(sta_info.password, token, strlen(token));
+        token = strtok(NULL, ",");
+        memcpy(sta_info.identifier, token, strlen(token));
+        // if (xSemaphoreTake(bufferMutex, portMAX_DELAY)) {
+        //     memcpy(ble_in, data, ctxt->om->om_len);
+        //     ble_numbytes = ctxt->om->om_len;
+        //     xSemaphoreGive(bufferMutex);
+        // }
+        // MODLOG_DFLT(INFO, "Data copied: %s",
+        //             ble_in);
+
+        wifi_sta_reconnect();
+        
         uuid = ctxt->chr->uuid;
         if (attr_handle == gatt_svr_chr_val_handle) {
             rc = gatt_svr_write(ctxt->om,
@@ -243,6 +281,9 @@ int
 gatt_svr_init(void)
 {
     int rc;
+
+    bufferMutex = xSemaphoreCreateMutex();
+    bufferMutex1 = xSemaphoreCreateMutex();
 
     ble_svc_gap_init();
     ble_svc_gatt_init();

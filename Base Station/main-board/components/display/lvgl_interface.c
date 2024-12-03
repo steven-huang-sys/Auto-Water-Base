@@ -7,7 +7,6 @@
 // This demo UI is adapted from LVGL official example: https://docs.lvgl.io/master/widgets/extra/meter.html#simple-meter
 
 #include "lvgl.h"
-#include "../buttons/hub_controller.h"
 
 int state = 0;
 
@@ -21,19 +20,9 @@ void example_lvgl_demo_ui(lv_disp_t *disp)
     /*Create a white label, set its text and align it to the center*/
     lv_obj_t * label = lv_label_create(scr);
     // lv_style_set_text_font(&test_style, LV_FONT_MONTSERRAT_24);
-    printf("Current Display State: %d\n", state);
-    if (state == 1) {
-        lv_label_set_text(label, "State 1");
-    }
-    else if (state == 2) {
-        lv_label_set_text(label, "State 2");
-    }
-    else if (state == 3) {
-        lv_label_set_text(label, "State 3");
-    }
-    else {
-        lv_label_set_text(label, "Hello world");
-    }
+
+    lv_label_set_text(label, "Hello world");
+
     lv_obj_set_style_text_color(label, lv_color_hex(0xffffff), LV_PART_MAIN);
     lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
 

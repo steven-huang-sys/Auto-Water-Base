@@ -50,7 +50,7 @@ static const char *TAG = "SPI Display";
 #define EXAMPLE_PIN_NUM_LCD_DC         8
 #define EXAMPLE_PIN_NUM_LCD_RST        9
 #define EXAMPLE_PIN_NUM_LCD_CS         10
-#define EXAMPLE_PIN_NUM_BK_LIGHT       2
+#define EXAMPLE_PIN_NUM_BK_LIGHT       14
 #define EXAMPLE_PIN_NUM_TOUCH_CS       15
 
 // The pixel number in horizontal and vertical
@@ -375,8 +375,9 @@ void display_init(void)
 
     ESP_LOGI(TAG, "Display LVGL Screen");
 
-    example_lvgl_demo_ui(disp);
-    // ui_init();
+    lv_display_set_default(disp);
+    // example_lvgl_demo_ui(disp);
+    ui_init();
     // ui_tick();
 
     // Lock the mutex due to the LVGL APIs are not thread-safe

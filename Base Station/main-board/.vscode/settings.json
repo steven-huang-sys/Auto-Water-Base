@@ -23,8 +23,16 @@
         "ble_svc_gap.h": "c",
         "lvgl.h": "c",
         "compare": "c",
-        "cstdint": "c"
+        "cstdint": "c",
+        "shared_variables.h": "c",
+        "semphr.h": "c",
+        "freertos.h": "c",
+        "ui.h": "c",
+        "esp_lvgl_port.h": "c",
+        "regex": "c",
+        "cstring": "c",
+        "http_client.h": "c"
     },
     "idf.flashType": "UART",
-    "idf.portWin": "COM7"
+    "idf.portWin": "COM4"
 }

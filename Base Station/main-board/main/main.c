@@ -22,8 +22,9 @@
 /* Buttons or Control Pad Module*/
 #include "hub_controller.h"
 
-/* HTTP Server */
+/* Internet Clients */
 #include "udp_client.h"
+#include "http_client.h"
 
 void app_main(void)
 {
@@ -42,6 +43,7 @@ void app_main(void)
     display_init();
     ble_init();
     wifi_init();
+    // http_client_init();
     udp_client_init();
 
 }
