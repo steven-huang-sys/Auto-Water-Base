@@ -31,7 +31,8 @@
         "esp_lvgl_port.h": "c",
         "regex": "c",
         "cstring": "c",
-        "http_client.h": "c"
+        "http_client.h": "c",
+        "esp_lcd_st7796.h": "c"
     },
     "idf.flashType": "UART",
     "idf.portWin": "COM4"

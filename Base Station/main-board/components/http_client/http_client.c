@@ -46,10 +46,18 @@ void http_json_read(char * http_buffer) {
         return;
     }
 
+    // Extract the "message" string
+    cJSON *message = cJSON_GetObjectItemCaseSensitive(json, "message");
+    if (cJSON_IsString(message) && (message->valuestring != NULL)) {
+        ESP_LOGI(TAG, "message: %s\n", message->valuestring);
+    } else {
+        ESP_LOGE(TAG, "message is not a valid string\n");
+    }
+
     // Extract the "commands" array
     cJSON *commands = cJSON_GetObjectItemCaseSensitive(json, "commands");
     if (!cJSON_IsArray(commands)) {
-        ESP_LOGE(TAG, "Commands is not an array\n");
+        ESP_LOGW(TAG, "Commands is not an array\n");
         cJSON_Delete(json);
         return;
     }
@@ -57,7 +65,7 @@ void http_json_read(char * http_buffer) {
     // Extract the first item in the "commands" array
     cJSON *command = cJSON_GetArrayItem(commands, 0);
     if (command == NULL) {
-        ESP_LOGE(TAG, "Command item not found\n");
+        ESP_LOGW(TAG, "Command item not found\n");
         cJSON_Delete(json);
         return;
     }
@@ -77,20 +85,13 @@ void http_json_read(char * http_buffer) {
         if (strstr(type->valuestring, "water-now") != NULL) {
             for (int i = 0; i < (sizeof(connected_devices) / sizeof(connected_devices[0])); i++) {
                 if (strstr(connected_devices[i].mac_str, macAddress->valuestring) != NULL) {
-                    snprintf(connected_devices[i].command, sizeof(connected_devices[i].command), "pump 3");
+                    bzero(connected_devices[i].command, sizeof(connected_devices[i].command));
+                    snprintf(connected_devices[i].command, sizeof(connected_devices[i].command), "read sensorp");
                 }
             }
         }
     } else {
         ESP_LOGE(TAG, "type is not a valid string\n");
-    }
-
-    // Extract the "message" string
-    cJSON *message = cJSON_GetObjectItemCaseSensitive(json, "message");
-    if (cJSON_IsString(message) && (message->valuestring != NULL)) {
-        ESP_LOGI(TAG, "message: %s\n", message->valuestring);
-    } else {
-        ESP_LOGE(TAG, "message is not a valid string\n");
     }
 
     // Clean up
@@ -132,7 +133,7 @@ void http_json_write(char * http_buffer) {
     cJSON_AddNumberToObject(root, "water", 80);
 
     // Serialize the JSON to a string (buffer)
-    char *json_string = cJSON_Print(root);  // formatted string
+    char *json_string = cJSON_PrintUnformatted(root);  // formatted string
     // Use cJSON_PrintUnformatted(root) for a compact (non-pretty) version
 
     if (json_string == NULL) {
@@ -142,12 +143,12 @@ void http_json_write(char * http_buffer) {
     }
 
     // Output the resulting JSON string
-    ESP_LOGI(TAG, "%s\n", json_string);
     if (strlen(sta_info.identifier) == 0) {
         snprintf(sta_info.identifier, sizeof(sta_info.identifier), "default");
     }
-    snprintf(http_buffer, BUFFER_SIZE, "PUT %s/%s HTTP/1.0\r\nHost: %s:%d\r\n\r\n%s", WEB_PATH, sta_info.identifier, WEB_SERVER, WEB_PORT, json_string);
 
+    snprintf(http_buffer, BUFFER_SIZE * 2, "PUT %s/%s HTTP/1.0\r\nHost: %s:%d\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: %d\r\n\r\n%s", WEB_PATH, sta_info.identifier, WEB_SERVER, WEB_PORT, strlen(json_string), json_string);
+    
     // Free the generated string and JSON object
     free(json_string);
     cJSON_Delete(root);
@@ -347,7 +348,10 @@ void http_put(void)
     // struct in_addr *addr;
     int s, r;
     char recv_buf[BUFFER_SIZE];
-    char send_buf[BUFFER_SIZE];
+    char content_buf[BUFFER_SIZE * 2];
+    char send_buf[BUFFER_SIZE * 2];
+
+    bzero(content_buf, sizeof(content_buf));
 
     /* Direct IP */
     int addr_family = 0;
@@ -364,32 +368,38 @@ void http_put(void)
     if(s < 0) {
         ESP_LOGE(TAG, "... Failed to allocate socket.");
         // vTaskDelay(1000 / portTICK_PERIOD_MS);
+        return;
     }
-    else {
-        // Set timeout
-        struct timeval timeout;
-        timeout.tv_sec = 5;
-        timeout.tv_usec = 0;
-        setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
-    }
+
+    // Set timeout
+    struct timeval timeout;
+    timeout.tv_sec = 10;
+    timeout.tv_usec = 0;
+    // setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
+    setsockopt (s, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof timeout);
+
     ESP_LOGI(TAG, "... allocated socket");
 
     if(connect(s, (struct sockaddr *)&dest_addr, INET_ADDRSTRLEN) != 0) {
         ESP_LOGE(TAG, "... socket connect failed errno=%d", errno);
         close(s);
         // vTaskDelay(4000 / portTICK_PERIOD_MS);
+        return;
     }
 
     ESP_LOGI(TAG, "... connected");
 
     http_json_write(send_buf);
+    printf("%s\n", send_buf);
 
-    if (write(s, send_buf, strlen(send_buf)) < 0) {
+    int bytes;
+    if ((bytes = write(s, send_buf, strlen(send_buf))) < 0) {
         ESP_LOGE(TAG, "... socket send failed");
         close(s);
         // vTaskDelay(4000 / portTICK_PERIOD_MS);
+        return;
     }
-    ESP_LOGI(TAG, "... socket send success");
+    ESP_LOGI(TAG, "... socket send success, bytes written: %d", bytes);
 
     // struct timeval receiving_timeout;
     // receiving_timeout.tv_sec = 5;
@@ -402,20 +412,25 @@ void http_put(void)
     //     continue;
     // }
     // ESP_LOGI(TAG, "... set socket receiving timeout success");
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+    setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
 
     /* Read HTTP response */
     do {
         bzero(recv_buf, sizeof(recv_buf));
         r = read(s, recv_buf, sizeof(recv_buf)-1);
+        strcat(content_buf, recv_buf); // only works since we're expecting json
         for(int i = 0; i < r; i++) {
             putchar(recv_buf[i]);
         }
     } while(r > 0);
 
-    printf("HTTP Receive Buffer: %s\n", recv_buf);
+    // printf("HTTP Receive Buffer: %s\n", recv_buf);
 
     char * content_ptr;
-    if ((content_ptr = strstr(recv_buf, "\r\n\r\n")) != NULL) {
+    if ((content_ptr = strstr(content_buf, "\r\n\r\n")) != NULL) {
+        // printf("\n%s\n", content_ptr);
         http_json_read(content_ptr);
     }
 

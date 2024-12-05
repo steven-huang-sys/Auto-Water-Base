@@ -94,55 +94,6 @@ static void example_lvgl_flush_cb(lv_display_t *drv, const lv_area_t *area, uint
     lv_display_flush_ready(drv);
 }
 
-/* Rotate display and touch, when rotated screen in LVGL. Called when driver parameters are updated. */
-// static void example_lvgl_port_update_callback(lv_display_t *drv)
-// {
-//     esp_lcd_panel_handle_t panel_handle = (esp_lcd_panel_handle_t) drv->user_data;
-
-//     switch (drv->rotation) {
-//     case LV_DISP_ROTATION_0:
-//         // Rotate LCD display
-//         esp_lcd_panel_swap_xy(panel_handle, false);
-//         esp_lcd_panel_mirror(panel_handle, true, false);
-// #if CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
-//         // Rotate LCD touch
-//         esp_lcd_touch_set_mirror_y(tp, false);
-//         esp_lcd_touch_set_mirror_x(tp, false);
-// #endif
-//         break;
-//     case LV_DISP_ROTATION_90:
-//         // Rotate LCD display
-//         esp_lcd_panel_swap_xy(panel_handle, true);
-//         esp_lcd_panel_mirror(panel_handle, true, true);
-// #if CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
-//         // Rotate LCD touch
-//         esp_lcd_touch_set_mirror_y(tp, false);
-//         esp_lcd_touch_set_mirror_x(tp, false);
-// #endif
-//         break;
-//     case LV_DISP_ROTATION_180:
-//         // Rotate LCD display
-//         esp_lcd_panel_swap_xy(panel_handle, false);
-//         esp_lcd_panel_mirror(panel_handle, false, true);
-// #if CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
-//         // Rotate LCD touch
-//         esp_lcd_touch_set_mirror_y(tp, false);
-//         esp_lcd_touch_set_mirror_x(tp, false);
-// #endif
-//         break;
-//     case LV_DISP_ROTATION_270:
-//         // Rotate LCD display
-//         esp_lcd_panel_swap_xy(panel_handle, true);
-//         esp_lcd_panel_mirror(panel_handle, false, false);
-// #if CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
-//         // Rotate LCD touch
-//         esp_lcd_touch_set_mirror_y(tp, false);
-//         esp_lcd_touch_set_mirror_x(tp, false);
-// #endif
-//         break;
-//     }
-// }
-
 #if CONFIG_EXAMPLE_LCD_TOUCH_ENABLED
 static void example_lvgl_touch_cb(lv_indev_drv_t * drv, lv_indev_data_t * data)
 {
@@ -211,7 +162,7 @@ void display_init(void)
     static lv_display_t * disp;      // contains callback functions
 
     const lvgl_port_cfg_t lvgl_cfg = ESP_LVGL_PORT_INIT_CONFIG();
-    esp_err_t err = lvgl_port_init(&lvgl_cfg);
+    ESP_ERROR_CHECK(lvgl_port_init(&lvgl_cfg));
 
     ESP_LOGI(TAG, "Turn off LCD backlight");
     gpio_config_t bk_gpio_config = {
@@ -253,7 +204,9 @@ void display_init(void)
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_ST7796
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+        // .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+        // .rgb_endian = ESP_LCD_COLOR_SPACE_BGR,
+        .color_space = ESP_LCD_COLOR_SPACE_RGB,
 #else
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
 #endif

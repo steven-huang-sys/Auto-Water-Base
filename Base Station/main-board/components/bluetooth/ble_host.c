@@ -216,6 +216,7 @@ ble_watering_gap_event(struct ble_gap_event *event, void *arg)
                     event->connect.status);
 
         if (event->connect.status == 0) {
+            ble_att_set_preferred_mtu(247);
             rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
             assert(rc == 0);
             bleprph_print_conn_desc(&desc);

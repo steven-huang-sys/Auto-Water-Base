@@ -183,20 +183,14 @@ gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
                     data);
         
         char ble_in[512];
-        int ble_numbytes = snprintf(ble_in, ctxt->om->om_len, "%s", data);
+        int ble_numbytes = snprintf(ble_in, ctxt->om->om_len + 1, "%s", data);
         char * token = strtok(ble_in, ",");
         memcpy(sta_info.ssid, token, strlen(token));
         token = strtok(NULL, ",");
         memcpy(sta_info.password, token, strlen(token));
         token = strtok(NULL, ",");
+        // printf("token: %s\n", token);
         memcpy(sta_info.identifier, token, strlen(token));
-        // if (xSemaphoreTake(bufferMutex, portMAX_DELAY)) {
-        //     memcpy(ble_in, data, ctxt->om->om_len);
-        //     ble_numbytes = ctxt->om->om_len;
-        //     xSemaphoreGive(bufferMutex);
-        // }
-        // MODLOG_DFLT(INFO, "Data copied: %s",
-        //             ble_in);
 
         wifi_sta_reconnect();
         

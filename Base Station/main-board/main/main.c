@@ -40,7 +40,7 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(esp_status);
 
-    display_init();
+    // display_init();
     ble_init();
     wifi_init();
     // http_client_init();

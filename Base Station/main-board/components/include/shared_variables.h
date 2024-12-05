@@ -25,7 +25,7 @@ struct devices {
 struct sta_fields {
     char ssid[STA_STR_SIZE];
     char password[STA_STR_SIZE]; // for anyone reading this in the future, this is NOT how you should do WiFi provisioning
-    char identifier[256];
+    char identifier[257];
 };
 
 // extern char ble_payload[1024];

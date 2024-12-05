@@ -93,7 +93,6 @@ void udp_client_task(void *pvParameters)
                                 char * buff_ptr;
                                 if ((buff_ptr = strstr(rx_buffer, "Moisture")) != NULL) {
                                     sscanf(buff_ptr, "Moisture: %d", &connected_devices[i].moisture);
-                                    ESP_LOGI(TAG, "Moisture read: %d", connected_devices[i].moisture);
                                 }
                                 if ((buff_ptr = strstr(rx_buffer, "Temperature")) != NULL) {
                                     sscanf(buff_ptr, "Temperature: %f", &connected_devices[i].temperature);
@@ -104,6 +103,7 @@ void udp_client_task(void *pvParameters)
                             }
                         } while (((strstr(rx_buffer, "Command Complete")) == NULL) && (len >= 0));
                                 
+                        bzero(connected_devices[i].command, sizeof(connected_devices[i].command));        
                         snprintf(connected_devices[i].command, sizeof(connected_devices[i].command), "read sensors");
                     }
                     
@@ -116,11 +116,15 @@ void udp_client_task(void *pvParameters)
                 }
                 shutdown(sock, 0);
                 close(sock);
-                vTaskDelay(pdMS_TO_TICKS(3000));
+                vTaskDelay(pdMS_TO_TICKS(500));
             }
         }
+
         http_put();
-        vTaskDelay(pdMS_TO_TICKS(5000));
+        // Stack usage monitoring
+        UBaseType_t high_water_mark = uxTaskGetStackHighWaterMark(NULL);
+        ESP_LOGI(TAG, "Stack high water mark: %d words", high_water_mark);
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 
@@ -131,7 +135,7 @@ void udp_client_init(void)
     // ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     ESP_LOGI(TAG, "Creating UDP Client...");
-    xTaskCreate(udp_client_task, "udp_client", 1024*10, NULL, 5, NULL);
+    xTaskCreate(udp_client_task, "udp_client", 1024*30, NULL, 4, NULL);
     ESP_LOGI(TAG, "UDP Client Started");
 
 }
